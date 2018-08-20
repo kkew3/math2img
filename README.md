@@ -1,8 +1,10 @@
 # math2img -- Converting math formula to image offline
 
+![sample-output](sample/out.jpg)
+
 ## Introduction
 
-This utility converts math formula (in LaTeX) to image of any format that `imagemagick` supports. The implementation is based on [TeX to image over command line](https://tex.stackexchange.com/questions/34054/tex-to-image-over-command-line/34058#34058).
+This utility converts math formula (in LaTeX) to image of any format that `imagemagick` supports. The implementation is based on [TeX to image over command line](https://tex.stackexchange.com/questions/34054/tex-to-image-over-command-line/34058#34058). The above image is a sample output.
 
 ## Dependencies
 

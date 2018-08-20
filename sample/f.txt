@@ -1,0 +1,1 @@
+\nabla g(x) = \arg\max_{\delta}{\lim_{\lambda \rightarrow 0}{\frac{\partial}{\partial\lambda}g\!\left(x+\lambda\frac{\delta}{\norm{\delta}}\right)}}
