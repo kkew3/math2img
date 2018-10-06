@@ -32,7 +32,7 @@ Might work in Windows 10 WSL but never tested.
 
 ## Usage
 
-	math2img.sh output-image [input-formula]
+	math2img.sh output-image [input-formula|-]
 	
 	output-image: the image file to write
 	input-formula (optional): the file containing the formula to compile.
@@ -41,6 +41,12 @@ Might work in Windows 10 WSL but never tested.
 	                          "\begin{equation*}" and "\end{equation*}".
 	                          All commands in TeXLive packages "amsmath",
 	                          "amssymb" and "physics" are supported.
+
+If `input-formula` is not given, the default `EDITOR` will be opened so that
+the user may enter the formula. If it's specified as `-`, the formula will be
+read from `/dev/stdin` (and will loop if `/dev/stdin` is in fact empty). If
+it's specified as a non-file string, the script terminates and returns 0, the
+same behavior as specifying no formula, e.g. `echo | math2img.sh x.png -`.
 
 ## Examples
 
