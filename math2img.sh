@@ -1,12 +1,22 @@
 #!/bin/bash
 show_help() {
-	echo "Usage: $0 output-image [ input-math-file ]"
-	echo "If \`input-math-file\` is not specified, it will be prompted "
-	echo "in $EDITOR (default to \`vi\`)"
-	echo
-	echo "Example:"
-	echo "echo 'f(x)=2x+1' > math.txt"
-	echo "$0 out.jpg math.txt"
+	cat << EOF
+Usage: $0 output-image [ input-math-file ]
+If \`input-math-file\` is not specified, it will be prompted in \$EDITOR,
+which if not set, default to "vi"). Input from stdin is not currently accepted.
+
+Usage example:
+	echo 'f(x)=2x+1' > math.txt
+	$(basename $0) out.jpg math.txt
+
+Return code:
+- 0: success, or aborted when no math equation is specified (e.g. after 
+     exitting the editor before inputing anything)
+- 1: \`output-image\` is not specified
+- 2: error creating temporary directory
+- 3: when failing to compile PDF from the underlying LaTeX file
+- 4: when failing to convert PDF file to image file
+EOF
 }
 
 # prepare arguments
@@ -20,13 +30,13 @@ elif [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 fi
 outfile=$(realpath "$1")
 if [ -z "$2" ]; then
-	rm -f "$srcdir/math.txt"
-	touch "$srcdir/math.txt"
+	rm -f "$srcdir/math.tmp" "$srcdir"/*.swp
+	touch "$srcdir/math.tmp"
 	if [ -z "$EDITOR" ]; then
 		EDITOR=vi
 	fi
-	$EDITOR "$srcdir/math.txt"
-	mathfile="$srcdir/math.txt"
+	$EDITOR "$srcdir/math.tmp"
+	mathfile="$srcdir/math.tmp"
 else
 	mathfile="$2"
 fi
