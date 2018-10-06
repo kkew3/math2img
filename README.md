@@ -66,6 +66,19 @@ or specify the formula without creating an intermediate file:
 math2img.sh out.jpg
 # Now a text editor is opened for you to fill in the math equation.
 # Save and exit the editor to continue
+# check the produced image "out.jpg" now
+```
+
+or specify the formula from stdin:
+
+```bash
+cat << EOF | math2img.sh out.jpg -
+\begin{aligned}
+f(x) &= \nabla g(x)\\
+     &= \cdots\\
+\end{aligned}
+EOF
+# check the produced image "out.jpg" now
 ```
 
 If an invalid math formula is specified, no image will be produced.
