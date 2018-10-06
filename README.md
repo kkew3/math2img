@@ -71,3 +71,9 @@ If an invalid math formula is specified, no image will be produced.
 - `2`: error creating temporary working directory (occurs when, say, disk is full)
 - `3`: error compiling the formula to PDF
 - `4`: error converting PDF to image (occurs when, say, the image extension is not supported by `imagemagick`)
+
+
+## Known issue
+
+`ImageMagick` may prevent user from reading PDF file.
+See detailed explanation of this issue and corresponding solution in [this post](https://stackoverflow.com/a/52661288).
