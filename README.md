@@ -48,6 +48,15 @@ read from `/dev/stdin` (and will loop if `/dev/stdin` is in fact empty). If
 it's specified as a non-file string, the script terminates and returns 0, the
 same behavior as specifying no formula, e.g. `echo | math2img.sh x.png -`.
 
+### Error code
+
+- `0`: success
+- `1`: not specifying the image file to output
+- `2`: error creating temporary working directory (occurs when, say, disk is full)
+- `3`: error compiling the formula to PDF
+- `4`: error converting PDF to image (occurs when, say, the image extension is not supported by `imagemagick`)
+
+
 ## Examples
 
 ```bash
@@ -83,16 +92,13 @@ EOF
 
 If an invalid math formula is specified, no image will be produced.
 
-## Error code
-
-- `0`: success
-- `1`: not specifying the image file to output
-- `2`: error creating temporary working directory (occurs when, say, disk is full)
-- `3`: error compiling the formula to PDF
-- `4`: error converting PDF to image (occurs when, say, the image extension is not supported by `imagemagick`)
-
 
 ## Known issue
 
 `ImageMagick` may prevent user from reading PDF file.
 See detailed explanation of this issue and corresponding solution in [this post](https://stackoverflow.com/a/52661288).
+
+
+## Similar repositories
+
+- [nwtgck/math2img](https://github.com/nwtgck/math2img.git)
