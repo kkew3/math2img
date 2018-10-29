@@ -1,8 +1,6 @@
 #!/bin/bash
 
 show_help() {
-	show_usage
-	echo
 	cat << EOF
 Usage: $(basename "$0") [OPTIONS]...
 
@@ -57,6 +55,9 @@ Examples:
 
 	# tolerate empty formula; "image.png" won't be written
 	echo '' | math2img -eqf- -o image.png
+
+	# open \$EDITOR and write the image to "my image" in GIF format
+	math2img -Tgif -o "my image"
 EOF
 }
 
