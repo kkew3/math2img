@@ -10,18 +10,19 @@ This utility converts math formula (in LaTeX) to image of any format that `image
 
 - `texlive-full`
 - `imagemagick`
+- `ghostscript`
 
 Installation of dependencies (Debian/Ubuntu):
 
 ```bash
 sudo apt update
-sudo apt install texlive-full imagemagick
+sudo apt install texlive-full imagemagick ghostscript
 ```
 
 ## Installation
 
 ```bash
-cd $DIRECTORY_TO_INSTALL
+cd "$DIRECTORY_TO_INSTALL"
 git clone https://github.com/kkew3/math2img.git
 export PATH="$DIRECTORY_TO_INSTALL/math2img:$PATH"
 ```
@@ -32,65 +33,66 @@ Might work in Windows 10 WSL but never tested.
 
 ## Usage
 
-	math2img.sh output-image [input-formula|-]
-	
-	output-image: the image file to write
-	input-formula (optional): the file containing the formula to compile.
-	                          The formula will be compiled as if it were
-	                          stripped and placed between
-	                          "\begin{equation*}" and "\end{equation*}".
-	                          All commands in TeXLive packages "amsmath",
-	                          "amssymb" and "physics" are supported.
+> Copied from `math2img -h`
 
-If `input-formula` is not given, the default `EDITOR` will be opened so that
-the user may enter the formula. If it's specified as `-`, the formula will be
-read from `/dev/stdin` (and will loop if `/dev/stdin` is in fact empty). If
-it's specified as a non-file string, the script terminates and returns 0, the
-same behavior as specifying no formula, e.g. `echo | math2img.sh x.png -`.
-
-### Error code
-
-- `0`: success
-- `1`: not specifying the image file to output
-- `2`: error creating temporary working directory (occurs when, say, disk is full)
-- `3`: error compiling the formula to PDF
-- `4`: error converting PDF to image (occurs when, say, the image extension is not supported by `imagemagick`)
-
-
-## Examples
-
-```bash
-cat > formula << EOF
-\begin{aligned}
-f(x) &= \nabla g(x)\\
-     &= \cdots\\
-\end{aligned}
-EOF
-math2img.sh out.jpg formula
-# check the produced image "out.jpg" now
 ```
-or specify the formula without creating an intermediate file:
+Usage: math2img [OPTIONS]...
 
-```bash
-math2img.sh out.jpg
-# Now a text editor is opened for you to fill in the math equation.
-# Save and exit the editor to continue
-# check the produced image "out.jpg" now
+This utility converts LaTeX formula to image by calling `pdflatex' and
+`convert' (ImageMagick).  The LaTeX formula may use any commands from
+packages `amsmath', `amssymb' and `physics'.
+
+Options:
+
+    -e            returns 0 even if the specified math equation is empty or
+                  contains only whitespace characters; if not specified,
+                  returns 2
+    -f MATHFILE   a file where the math formula is presented; if MATHFILE is
+                  specified as "-", then it will be read from /dev/stdin; if
+                  the option is not specified, the text editor specified by
+                  variable EDITOR will be opened for the user to type the math
+                  equation; if EDITOR is not set, it's default to `vi'
+    -h            display this help and exit
+    -o OUTFILE    the result image file to write; if not specified, write to
+                  /dev/stdout in format FORMAT. Not specifying this option
+                  implies `-q'
+    -q            suppress any stdout/stderr message
+    -T FORMAT     the format to use; for a list of supported format, refer to
+                  Section "Supported Image Formats" on page
+                  https://imagemagick.org/script/formats.php where the Mode
+                  column contains 'W'. This option overwrites the filename
+                  extension in OUTFILE, if any. When OUTFILE has been
+                  specified, there's no default FORMAT; otherwise, the default
+                  FORMAT is "PNG"
+
+Return code:
+
+	0             success
+	1             command line option parsing error
+	2             aborted since the specified math equation is empty or
+	              contains only whitespace characters
+	4             error raised when reading from MATHFILE
+	8             error raised when compiling PDF from LaTeX
+	16            error raised when converting PDF to image file
+	32            error raised if FORMAT is not supported by ImageMagick
+	X             when errno can't be decided precisely, the return code is the
+	              bitwise-OR of more than one nonzero return codes defined
+	              above
+
+Examples:
+
+	# display 'f(x)' using ImageMagick `display' utility
+	echo 'f(x)' | math2img -Tjpeg -f- | display
+
+	# save formula image to "image.png"
+	echo 'f(x)' | math2img -o image.png -f-
+
+	# tolerate empty formula; "image.png" won't be written
+	echo '' | math2img -eqf- -o image.png
+
+	# open $EDITOR and write the image to "my image" in GIF format
+	math2img -Tgif -o "my image"
 ```
-
-or specify the formula from stdin:
-
-```bash
-cat << EOF | math2img.sh out.jpg -
-\begin{aligned}
-f(x) &= \nabla g(x)\\
-     &= \cdots\\
-\end{aligned}
-EOF
-# check the produced image "out.jpg" now
-```
-
-If an invalid math formula is specified, no image will be produced.
 
 
 ## Known issue
@@ -99,6 +101,6 @@ If an invalid math formula is specified, no image will be produced.
 See detailed explanation of this issue and corresponding solution in [this post](https://stackoverflow.com/a/52661288).
 
 
-## Similar repositories
+## See also
 
 - [nwtgck/math2img](https://github.com/nwtgck/math2img.git)
