@@ -1,98 +1,217 @@
 #!/bin/bash
-show_help() {
-	cat << EOF
-Usage: $0 output-image [ input-math-file | - ]
-If \`input-math-file\` is not specified, it will be prompted in \$EDITOR,
-which if not set, default to "vi"). If \`input-math-file\` is specified as '-',
-The formula will be read from stdin.
 
-Usage example:
-	echo 'f(x)=2x+1' > math.txt
-	$(basename $0) out.jpg math.txt
+show_help() {
+	show_usage
+	echo
+	cat << EOF
+Usage: $(basename "$0") [OPTIONS]...
+
+This utility converts LaTeX formula to image by calling \`pdflatex' and
+\`convert' (ImageMagick).  The LaTeX formula may use any commands from
+packages \`amsmath', \`amssymb' and \`physics'.
+
+Options:
+
+    -e            returns 0 even if the specified math equation is empty or
+                  contains only whitespace characters; if not specified,
+                  returns $ERRNO_EMPTYMATH
+    -f MATHFILE   a file where the math formula is presented; if MATHFILE is
+                  specified as "-", then it will be read from /dev/stdin; if
+                  the option is not specified, the text editor specified by
+                  variable EDITOR will be opened for the user to type the math
+                  equation; if EDITOR is not set, it's default to \`vi'
+    -h            display this help and exit
+    -o OUTFILE    the result image file to write; if not specified, write to
+                  /dev/stdout in format FORMAT. Not specifying this option
+                  implies \`-q'
+    -q            suppress any stdout/stderr message
+    -T FORMAT     the format to use; for a list of supported format, refer to
+                  Section "Supported Image Formats" on page
+                  https://imagemagick.org/script/formats.php where the Mode
+                  column contains 'W'. This option overwrites the filename
+                  extension in OUTFILE, if any. When OUTFILE has been
+                  specified, there's no default FORMAT; otherwise, the default
+                  FORMAT is "PNG"
 
 Return code:
-- 0: success, or aborted when no math equation is specified (e.g. after 
-     exitting the editor before inputing anything)
-- 1: \`output-image\` is not specified
-- 2: error creating temporary directory
-- 3: when failing to compile PDF from the underlying LaTeX file
-- 4: when failing to convert PDF file to image file
+
+	0             success
+	1             command line option parsing error
+	2             aborted since the specified math equation is empty or
+	              contains only whitespace characters
+	4             error raised when reading from MATHFILE
+	8             error raised when compiling PDF from LaTeX
+	16            error raised when converting PDF to image file
+	32            error raised if FORMAT is not supported by ImageMagick
+	X             when errno can't be decided precisely, the return code is the
+	              bitwise-OR of more than one nonzero return codes defined
+	              above
+
+Examples:
+
+	# display 'f(x)' using ImageMagick \`display' utility
+	echo 'f(x)' | math2img -Tjpeg -f- | display
+
+	# save formula image to "image.png"
+	echo 'f(x)' | math2img -o image.png -f-
+
+	# tolerate empty formula; "image.png" won't be written
+	echo '' | math2img -eqf- -o image.png
 EOF
 }
 
+readonly ERRNO_SUCCESS=0
+readonly ERRNO_CMDOPT=1
+readonly ERRNO_EMPTYMATH=2
+readonly ERRNO_READMATH=4
+readonly ERRNO_PDFLATEX=8
+readonly ERRNO_CONVERT=16
+readonly ERRNO_UNSUPFORMAT=32
 
-readonly srcdir=$(dirname ${BASH_SOURCE[0]})
-readonly localmathfile="$srcdir/math.tmp"
 
+readonly CURDIR="$(pwd)"
+readonly SRCDIR="$(dirname ${BASH_SOURCE[0]})"
+readonly TEMPDIR="$SRCDIR/tmp"
+
+localoutfile=
+
+
+complain_cmdopt() {
+	if [ -n "$1" ]; then
+		echo "$1" >> /dev/stderr
+	fi
+	exit $ERRNO_CMDOPT
+}
+
+complain_unless_q() {
+	if [ -z $quiet ]; then
+		echo "$1" >> /dev/stderr
+	fi
+}
+
+save_exit() {
+	cd "$CURDIR"
+	exit "$1"
+}
 
 parse_args() {
-	if [ -z "$1" ]; then
-		show_help
-		exit 1
-	elif [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-		show_help
-		exit 0
-	fi
-	outfile="$(realpath "$1")"
-	mathfile="$2"
+	mathfile=
+	outfile=
+	quiet=false
+	allow_emptymath=false
+	imgformat=
+	local opt=
+	while getopts ":ef:ho:qT:" opt; do
+		case "$opt" in
+			e)  allow_emptymath=true ;;
+			f)  mathfile="$OPTARG" ;;
+			h)  show_help; save_exit $ERRNO_SUCCESS ;;
+			o)  outfile="$OPTARG" ;;
+			q)  quiet=true ;;
+			T)  imgformat="$OPTARG" ;;
+			\?) complain_cmdopt "Invalid option: -$OPTARG" ;;
+			:)  complain_cmdopt "Option -$OPTARG requires an argument" ;;
+		esac
+	done
+	if [ -z "$outfile" ]; then quiet=true; fi
+	if [ -z "$EDITOR" ]; then EDITOR=vi; fi
+}
+
+
+setup_wd() {
+	mkdir -p "$TEMPDIR"
+	cd "$TEMPDIR"
+	find . -name . -o -prune -print0 | xargs -0 -- rm -rf
+	cd "$CURDIR"
 }
 
 
 # Prepare math formula into $localmathfile
 prepare_math() {
-	rm -f "$srcdir"/*.swp
+	localmathfile="$(mktemp -p "$TEMPDIR")"
 	if [ -z "$mathfile" ]; then
-		if [ -z "$EDITOR" ]; then
-			EDITOR=vi
-		fi
 		> "$localmathfile"
-		$EDITOR "$localmathfile"
+		"$EDITOR" "$localmathfile"
 	elif [ "$mathfile" = "-" ]; then
 		cat /dev/stdin > "$localmathfile"
-	elif [ -f "$mathfile" ]; then
-		cp "$mathfile" "$localmathfile"
 	else
-		# this leads to "Math expression is empty"
-		> "$localmathfile"
+		if ! cp "$mathfile" "$localmathfile" 2> /dev/null; then
+			complain_unless_q "Error reading \"$mathfile\""
+			save_exit $ERRNO_READMATH
+		fi
 	fi
-	if ! "$srcdir/hasformula.py" "$localmathfile"; then
-		echo "Math expression is empty; aborted"
-		exit 0
+	if ! python "$SRCDIR/hasformula.py" "$localmathfile"; then
+		complain_unless_q "Math expression is empty; aborted"
+		if $allow_emptymath; then
+			save_exit $ERRNO_SUCCESS
+		else
+			save_exit $ERRNO_EMPTYMATH
+		fi
 	fi
-	"$srcdir/stripformula.py" "$localmathfile"
+	python "$SRCDIR/stripformula.py" "$localmathfile"
 }
 
 
-# Do the conversion $localmathfile -> LaTeX -> PDF -> Image
+# if successful, the result image is in "$localoutfile"
 conversion() {
-	local CURDIR=$(pwd)
-	local wdir=$(mktemp -d)
-	if [ "$CURDIR" = "$wdir" ]; then
-		echo "Error creating temp directory; aborted"
-		exit 2
-	fi
-	cat "$srcdir/prefix.txt" "$localmathfile" "$srcdir/suffix.txt" > "$wdir/math.tex"
-	cd "$wdir"
+	# latex -> pdf
+	local wdir1="$(mktemp -p "$TEMPDIR" -d)"
+	cat "$SRCDIR/prefix.txt" "$localmathfile" "$SRCDIR/suffix.txt" > "$wdir1/math.tex"
+	cd "$wdir1"
 	if ! pdflatex math.tex; then
-		cd "$CURDIR"
-		rm -rf "$wdir"
-		exit 3
+		save_exit $ERRNO_PDFLATEX
 	fi
-	if ! convert -density 300 math.pdf -quality 90 -trim "$outfile"; then
-		cd "$CURDIR"
-		rm -rf "$wdir"
-		exit 4
+
+	# pdf -> image
+	local wdir2="$(mktemp -p "$TEMPDIR" -d)"
+	local wfile2=
+	if [ -z "$outfile" -a -z "$imgformat" ]; then
+		localoutfile="$(mktemp -p "$wdir2")"
+	elif [ -z "$outfile" -a -n "$imgformat" ]; then
+		wfile2="$(mktemp -p "$wdir2")"
+		localoutfile="${imgformat}:${wfile2}"
+	elif [ -n "$imgformat" ]; then
+		localoutfile="${imgformat}:${wdir2}/$(basename "$outfile")"
+	else
+		localoutfile="${wdir2}/$(basename "$outfile")"
 	fi
-	cd "$CURDIR"
-	rm -rf "$wdir"
-	echo "Removed temp working directory $wdir"
+	if ! convert -density 300 math.pdf -quality 90 -trim "$localoutfile"; then
+		save_exit $(( $ERRNO_CONVERT | $ERRNO_UNSUPFORMAT ))
+	fi
+	localoutfile="$(find "$wdir2" -type f | head -n1)"
+
+	# now see if FORMAT is supported
+	if [ -n "$outfile" -a -n "$imgformat" ]; then
+		if [ "$(basename "$localoutfile")" != "$(basename "$outfile")" ]; then
+			complain_unless_q "Unsupported format: $imgformat"
+			save_exit $ERRNO_UNSUPFORMAT
+		fi
+	elif [ -z "$outfile" -a -n "$imgformat" ]; then
+		if [ "$(basename "$localoutfile")" != "$(basename "$wfile2")" ]; then
+			complain_unless_q "Unsupported format: $imgformat"
+			save_exit $ERRNO_UNSUPFORMAT
+		fi
+	fi
 }
 
 
 main() {
 	parse_args "$@"
-	prepare_math
-	conversion
+	setup_wd
+	if $quiet; then
+		prepare_math > /dev/null 2>&1
+		conversion > /dev/null 2>&1
+	else
+		prepare_math
+		conversion
+	fi
+
+	cd "$CURDIR"
+	if [ -n "$outfile" ]; then
+		mv "$localoutfile" "$outfile"
+	else
+		cat "$localoutfile"
+	fi
 }
 
 
