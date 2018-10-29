@@ -41,9 +41,9 @@ Return code:
 	8             error raised when compiling PDF from LaTeX
 	16            error raised when converting PDF to image file
 	32            error raised if FORMAT is not supported by ImageMagick
-	X             when errno can't be decided precisely, the return code is the
-	              bitwise-OR of more than one nonzero return codes defined
-	              above
+	X             when errno can't be decided precisely, the return code
+	              is the bitwise-OR of more than one nonzero return codes
+		      defined above
 
 Examples:
 
