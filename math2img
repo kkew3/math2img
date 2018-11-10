@@ -21,7 +21,8 @@ Options:
     -h            display this help and exit
     -o OUTFILE    the result image file to write; if not specified, write to
                   /dev/stdout in format FORMAT. Not specifying this option
-                  implies \`-q'
+                  implies \`-q' and MATHFILE must be specified as a filename;
+		  otherwise fails and returns $ERRNO_EDITORFAIL
     -q            suppress any stdout/stderr message
     -T FORMAT     the format to use; for a list of supported format, refer to
                   Section "Supported Image Formats" on page
@@ -41,6 +42,7 @@ Return code:
 	8             error raised when compiling PDF from LaTeX
 	16            error raised when converting PDF to image file
 	32            error raised if FORMAT is not supported by ImageMagick
+	64            error raised when opening EDITOR
 	X             when errno can't be decided precisely, the return code
 	              is the bitwise-OR of more than one nonzero return codes
 		      defined above
@@ -68,6 +70,7 @@ readonly ERRNO_READMATH=4
 readonly ERRNO_PDFLATEX=8
 readonly ERRNO_CONVERT=16
 readonly ERRNO_UNSUPFORMAT=32
+readonly ERRNO_EDITORFAIL=64
 
 
 readonly CURDIR="$(pwd)"
@@ -130,9 +133,12 @@ setup_wd() {
 # Prepare math formula into $localmathfile
 prepare_math() {
 	localmathfile="$(mktemp -p "$TEMPDIR")"
-	if [ -z "$mathfile" ]; then
+	if [ -z "$mathfile" -a -t 1 ]; then
 		> "$localmathfile"
 		"$EDITOR" "$localmathfile"
+	elif [ -z "$mathfile" -a ! -t 1 ]; then
+		complain_unless_q "Failed to open vim"
+		save_exit $ERRNO_EDITORFAIL
 	elif [ "$mathfile" = "-" ]; then
 		cat /dev/stdin > "$localmathfile"
 	else
@@ -141,7 +147,9 @@ prepare_math() {
 			save_exit $ERRNO_READMATH
 		fi
 	fi
-	if ! python "$SRCDIR/hasformula.py" "$localmathfile"; then
+	echo >> "$localmathfile"
+
+	if [ "$(sed -f "$SRCDIR/striplines.sed" "$localmathfile" | wc -l)" = 0 ]; then
 		complain_unless_q "Math expression is empty; aborted"
 		if $allow_emptymath; then
 			save_exit $ERRNO_SUCCESS
@@ -149,7 +157,11 @@ prepare_math() {
 			save_exit $ERRNO_EMPTYMATH
 		fi
 	fi
-	python "$SRCDIR/stripformula.py" "$localmathfile"
+	if sed --version | grep -q "(GNU sed)"; then
+		sed -i -f "$SRCDIR/striplines.sed" "$localmathfile"
+	else
+		sed -i '' -f "$SRCDIR/striplines.sed" "$localmathfile"
+	fi
 }
 
 
@@ -200,7 +212,7 @@ main() {
 	parse_args "$@"
 	setup_wd
 	if $quiet; then
-		prepare_math > /dev/null 2>&1
+		prepare_math
 		conversion > /dev/null 2>&1
 	else
 		prepare_math
