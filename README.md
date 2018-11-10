@@ -55,7 +55,8 @@ Options:
     -h            display this help and exit
     -o OUTFILE    the result image file to write; if not specified, write to
                   /dev/stdout in format FORMAT. Not specifying this option
-                  implies `-q'
+                  implies `-q' and MATHFILE must be specified as a filename;
+		  otherwise fails and returns 64
     -q            suppress any stdout/stderr message
     -T FORMAT     the format to use; for a list of supported format, refer to
                   Section "Supported Image Formats" on page
@@ -75,9 +76,10 @@ Return code:
 	8             error raised when compiling PDF from LaTeX
 	16            error raised when converting PDF to image file
 	32            error raised if FORMAT is not supported by ImageMagick
-	X             when errno can't be decided precisely, the return code is the
-	              bitwise-OR of more than one nonzero return codes defined
-	              above
+	64            error raised when opening EDITOR
+	X             when errno can't be decided precisely, the return code
+	              is the bitwise-OR of more than one nonzero return codes
+		      defined above
 
 Examples:
 
