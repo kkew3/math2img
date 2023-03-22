@@ -1,8 +1,0 @@
-\documentclass[a5paper]{article}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{physics}
-\pagenumbering{gobble}
-\DeclareMathSizes{12}{30}{16}{12}
-\begin{document}
-\begin{equation*}
