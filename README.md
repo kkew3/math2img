@@ -1,31 +1,32 @@
 # math2img -- Converting math formula to image offline
 
-![sample-output](sample/out.jpg)
+![sample-output](sample/out.svg)
+
+*Image best viewed in light background.*
 
 ## Introduction
 
-This utility converts math formula (in LaTeX) to image of any format that `imagemagick` supports. The implementation is based on [TeX to image over command line](https://tex.stackexchange.com/questions/34054/tex-to-image-over-command-line/34058#34058). The above image is a sample output.
+This utility converts math formula (in LaTeX) to SVG, which can be later converted to other image formats using e.g. `imagemagick`. The implementation is based on [TeX to image over command line](https://tex.stackexchange.com/questions/34054/tex-to-image-over-command-line/34058#34058). The above image is a sample output.
 
 ## Dependencies
 
 - `texlive-full`
-- `imagemagick`
-- `ghostscript`
-- `perl` (`v5.30` or above)
+- `bash`
 
 Installation of dependencies (Debian/Ubuntu):
 
 ```bash
 sudo apt update
-sudo apt install texlive-full imagemagick ghostscript
+sudo apt install texlive-full
 ```
 
 ## Installation
 
+For example,
+
 ```bash
-cd "$DIRECTORY_TO_INSTALL"
-git clone https://github.com/kkew3/math2img.git
-export PATH="$DIRECTORY_TO_INSTALL/math2img:$PATH"
+git clone --depth=1 https://github.com/kkew3/math2img.git && cd math2img
+install math2img.sh ~/bin
 ```
 
 ## Support for Windows
@@ -34,49 +35,53 @@ Might work in Windows 10 WSL but never tested.
 
 ## Usage
 
-> Copied from `math2img.pl -h`
+### Examples
 
-```
-Usage: ./math2img.pl [OPTIONS]... OUTFILE
+Below commands are runnable after cloning this repository:
 
-This utility converts LaTeX formula to image by calling `xelatex' and
-`convert' (ImageMagick).  The LaTeX formula may use any commands from
-packages `amsmath' and `amssymb'.
+```bash
+# Write SVG output to sample/out.svg. This produces the image above.
+./math2img.sh -f=sample/f.txt -o=sample/out.svg
 
-Options:
+# Pipe SVG to imagemagick and convert to PNG.
+./math2img.sh -f=sample/f.txt | magick -density 500 -background white svg:- out.png
 
-    -f MATHFILE   a file where the math formula is presented; if MATHFILE is
-                  specified as "-", then it will be read from /dev/stdin; if
-                  the option is not specified, the text editor specified by
-                  variable EDITOR will be opened for the user to type the math
-                  equation; if EDITOR is not set, it's default to `vi'
-    -h            display this help and exit
+# Edit the formula in EDITOR.
+./math2img.sh -o=out.svg
 
-Argument:
+# Preview the latex source without conversion.
+./math2img.sh -f=sample/f.txt -c
 
-    OUTFILE       to which to write the image
-
-Return code:
-    0             success
-    1             command line option parsing error
-    2             error raised when compiling PDF from LaTeX
-    4             error raised when converting PDF to image file
-    8             error raised when opening EDITOR
-
-Examples:
-
-    # save formula image to "image.png"
-    echo 'f(x)' | math2img.pl -f- image.png
-
-    # open $EDITOR and write the image to "my image.gif"
-    math2img.pl "my image.gif"
+# This will error out if and EDITOR is required but stdout is non-interactive.
+./math2img.sh -c | cat
 ```
 
+Usage in Vim on Mac to preview the math formula in Safari.app:
 
-## Known issue
+1. Open a named buffer.
+2. Edit your formula.
+3. In cmdline, `:!math2img.sh -f=% -o=out.svg && open -a Safari out.svg`.
 
-`ImageMagick` may prevent user from reading PDF file.
-See detailed explanation of this issue and corresponding solution in [this post](https://stackoverflow.com/a/52661288).
+### Help message
+
+> Copied from `math2img.sh -h`
+
+```
+Usage: math2img.sh [OPTION]...
+
+Converts LaTeX formula to svg by calling `latex' followed by `dvisvgm'.
+Without `-f' option, $EDITOR will be opened to allow the user input the
+formula. The script respects $TMPDIR as the working directory. IF EDITOR is
+not set, default to `vi'. If TMPDIR is not set, `/tmp' is used.
+
+  -p=PACKAGE_LIST   usepackages, default to "amsmath,amssymb,mathtools,bbm"
+  -P=PREAMBLE_FILE  specify the preamble file, overrides PACKAGE_LIST
+  -f[=MATH_FILE]    specify the formula file, without MATH_FILE, read from stdin
+  -e=ENV            specify the math environment, e.g. "aligned", default none
+  -c                write the latex source to stdout and exit
+  -o=OUTPUT_FILE    specify the output svg file, default to stdout
+  -h                show this help message and exit
+```
 
 
 ## See also
