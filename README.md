@@ -40,8 +40,9 @@ Might work in Windows 10 WSL but never tested.
 Below commands are runnable after cloning this repository:
 
 ```bash
-# Write SVG output to sample/out.svg. This produces the image above.
-./math2img.sh -f=sample/f.txt -o=sample/out.svg
+# Write SVG output to sample/out.svg. This produces the image above. A zoom
+# factor of 2.5 is applied for aesthetic purpose.
+./math2img.sh -f=sample/f.txt -o=sample/out.svg -Z=2.5
 
 # Pipe SVG to imagemagick and convert to PNG.
 ./math2img.sh -f=sample/f.txt | magick -density 500 -background white svg:- out.png
@@ -80,6 +81,7 @@ not set, default to `vi'. If TMPDIR is not set, `/tmp' is used.
   -e=ENV            specify the math environment, e.g. "aligned", default none
   -c                write the latex source to stdout and exit
   -o=OUTPUT_FILE    specify the output svg file, default to stdout
+  -Z=ZOOM_FACTOR    specify the zooming of the produced svg
   -h                show this help message and exit
 ```
 

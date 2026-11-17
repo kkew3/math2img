@@ -15,6 +15,7 @@ not set, default to \`vi'. If TMPDIR is not set, \`/tmp' is used.
   -e=ENV            specify the math environment, e.g. "aligned", default none
   -c                write the latex source to stdout and exit
   -o=OUTPUT_FILE    specify the output svg file, default to stdout
+  -Z=ZOOM_FACTOR    specify the zooming of the produced svg
   -h                show this help message and exit
 EOF
 }
@@ -37,6 +38,7 @@ math_file_provided=
 math_env=
 write_latex=
 write_help=
+svg_zoom=
 _editor="${EDITOR:-vi}"
 _tmpdir="${TMPDIR:-/tmp}"
 while [[ -n "$1" ]]; do
@@ -65,6 +67,9 @@ while [[ -n "$1" ]]; do
             ;;
         -o=*)
             output_file="${1:3}"
+            ;;
+        -Z=*)
+            svg_zoom="${1:3}"
             ;;
         *)
             write_help=1
@@ -150,7 +155,11 @@ fi
 
 cd "$workdir"
 latex math.tex > /dev/null
-dvisvgm --no-fonts math.dvi > /dev/null
+if [[ -n "$svg_zoom" ]]; then
+    dvisvgm --zoom="$svg_zoom" --no-fonts math.dvi > /dev/null
+else
+    dvisvgm --no-fonts math.dvi > /dev/null
+fi
 cd "$cwd"
 
 if [[ ! -s "$workdir/math.svg" ]]; then
